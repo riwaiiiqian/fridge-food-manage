@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.fridge.mapper.FoodItemMapper">
+
+    <sql id="FoodItemVOColumns">
+        i.id,
+        i.name,
+        i.category_id,
+        c.name AS category_name,
+        c.color AS category_color,
+        i.quantity,
+        i.unit,
+        i.production_date,
+        i.shelf_life_days,
+        i.expire_date,
+        i.location,
+        i.remark,
+        i.created_at,
+        i.updated_at
+    </sql>
+
+    <sql id="FoodFilters">
+        <where>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND i.name LIKE CONCAT('%', #{query.keyword}, '%')
+            </if>
+            <if test="query.categoryId != null">
+                AND i.category_id = #{query.categoryId}
+            </if>
+            <if test="query.status == 'EXPIRED'">
+                AND i.expire_date &lt; #{query.today}
+            </if>
+            <if test="query.status == 'EXPIRING_SOON'">
+                AND i.expire_date &gt;= #{query.today}
+                AND i.expire_date &lt;= #{query.thresholdDate}
+            </if>
+            <if test="query.status == 'NORMAL'">
+                AND i.expire_date &gt; #{query.thresholdDate}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectPage" resultType="com.example.fridge.vo.FoodItemVO">
+        SELECT <include refid="FoodItemVOColumns"/>
+        FROM food_item i
+        INNER JOIN food_category c ON c.id = i.category_id
+        <include refid="FoodFilters"/>
+        ORDER BY i.expire_date ASC, i.updated_at DESC
+        LIMIT #{query.limit} OFFSET #{query.offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM food_item i
+        INNER JOIN food_category c ON c.id = i.category_id
+        <include refid="FoodFilters"/>
+    </select>
+
+    <select id="selectVOById" resultType="com.example.fridge.vo.FoodItemVO">
+        SELECT <include refid="FoodItemVOColumns"/>
+        FROM food_item i
+        INNER JOIN food_category c ON c.id = i.category_id
+        WHERE i.id = #{id}
+    </select>
+
+    <select id="selectById" resultType="com.example.fridge.entity.FoodItem">
+        SELECT id, name, category_id, quantity, unit, production_date, shelf_life_days,
+               expire_date, location, remark, created_at, updated_at
+        FROM food_item
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.fridge.entity.FoodItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO food_item
+            (name, category_id, quantity, unit, production_date, shelf_life_days, expire_date, location, remark)
+        VALUES
+            (#{name}, #{categoryId}, #{quantity}, #{unit}, #{productionDate}, #{shelfLifeDays},
+             #{expireDate}, #{location}, #{remark})
+    </insert>
+
+    <update id="update" parameterType="com.example.fridge.entity.FoodItem">
+        UPDATE food_item
+        SET name = #{name},
+            category_id = #{categoryId},
+            quantity = #{quantity},
+            unit = #{unit},
+            production_date = #{productionDate},
+            shelf_life_days = #{shelfLifeDays},
+            expire_date = #{expireDate},
+            location = #{location},
+            remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM food_item WHERE id = #{id}
+    </delete>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM food_item
+    </select>
+
+    <select id="countExpired" resultType="int">
+        SELECT COUNT(*) FROM food_item WHERE expire_date &lt; #{today}
+    </select>
+
+    <select id="countExpiringSoon" resultType="int">
+        SELECT COUNT(*) FROM food_item
+        WHERE expire_date &gt;= #{today}
+          AND expire_date &lt;= #{thresholdDate}
+    </select>
+
+    <select id="selectCategoryStats" resultType="com.example.fridge.vo.CategoryStatVO">
+        SELECT c.id AS category_id,
+               c.name AS category_name,
+               c.color AS category_color,
+               COUNT(i.id) AS count
+        FROM food_category c
+        LEFT JOIN food_item i ON i.category_id = c.id
+        GROUP BY c.id, c.name, c.color, c.sort_order
+        ORDER BY c.sort_order ASC, c.id ASC
+    </select>
+
+    <select id="selectExpiringSoonItems" resultType="com.example.fridge.vo.FoodItemVO">
+        SELECT <include refid="FoodItemVOColumns"/>
+        FROM food_item i
+        INNER JOIN food_category c ON c.id = i.category_id
+        WHERE i.expire_date &gt;= #{today}
+          AND i.expire_date &lt;= #{thresholdDate}
+        ORDER BY i.expire_date ASC
+        LIMIT #{limit}
+    </select>
+</mapper>

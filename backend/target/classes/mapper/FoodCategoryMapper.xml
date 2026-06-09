@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.fridge.mapper.FoodCategoryMapper">
+
+    <select id="selectAllWithCount" resultType="com.example.fridge.vo.FoodCategoryVO">
+        SELECT
+            c.id,
+            c.name,
+            c.color,
+            c.sort_order,
+            COUNT(i.id) AS item_count
+        FROM food_category c
+        LEFT JOIN food_item i ON i.category_id = c.id
+        GROUP BY c.id, c.name, c.color, c.sort_order
+        ORDER BY c.sort_order ASC, c.id ASC
+    </select>
+
+    <select id="selectById" resultType="com.example.fridge.entity.FoodCategory">
+        SELECT id, name, color, sort_order, created_at, updated_at
+        FROM food_category
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByName" resultType="com.example.fridge.entity.FoodCategory">
+        SELECT id, name, color, sort_order, created_at, updated_at
+        FROM food_category
+        WHERE name = #{name}
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.example.fridge.entity.FoodCategory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO food_category (name, color, sort_order)
+        VALUES (#{name}, #{color}, #{sortOrder})
+    </insert>
+
+    <update id="update" parameterType="com.example.fridge.entity.FoodCategory">
+        UPDATE food_category
+        SET name = #{name},
+            color = #{color},
+            sort_order = #{sortOrder}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM food_category WHERE id = #{id}
+    </delete>
+
+    <select id="countItems" resultType="int">
+        SELECT COUNT(*) FROM food_item WHERE category_id = #{id}
+    </select>
+</mapper>
